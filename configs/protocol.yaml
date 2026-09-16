@@ -1,0 +1,47 @@
+# UAR-MOT reproducibility protocol
+# Values marked TBD will be fixed before final evaluation.
+
+experiment:
+  name: "UAR-MOT"
+  seed: 42
+
+paths:
+  drive_root: "/content/drive/MyDrive/UAR-MOT"
+  datasets: "/content/drive/MyDrive/UAR-MOT/datasets"
+  detections: "/content/drive/MyDrive/UAR-MOT/detections"
+  calibration: "/content/drive/MyDrive/UAR-MOT/calibration"
+  checkpoints: "/content/drive/MyDrive/UAR-MOT/checkpoints"
+  outputs: "/content/drive/MyDrive/UAR-MOT/outputs"
+  metrics: "/content/drive/MyDrive/UAR-MOT/metrics"
+  logs: "/content/drive/MyDrive/UAR-MOT/logs"
+
+dataset:
+  primary: "VisDrone"
+  calibration_sequences: "TBD"
+  evaluation_sequences: "TBD"
+
+detector:
+  implementation: "TBD"
+  checkpoint: "TBD"
+  input_size: "TBD"
+  detections_cached: true
+
+bytetrack:
+  implementation: "FoundationVision/ByteTrack"
+  commit: "TBD"
+  track_thresh: "TBD"
+  match_thresh: "TBD"
+  track_buffer: "TBD"
+
+uarmot:
+  lambda_detection: "TBD"
+  lambda_motion: "TBD"
+  lambda_camera: "TBD"
+  tau_psi: "TBD"
+  tau_G: "TBD"
+  kappa_a: "TBD"
+
+evaluation:
+  implementation: "TrackEval"
+  commit: "TBD"
+  settings: "TBD"
