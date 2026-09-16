@@ -23,7 +23,7 @@ dataset:
   remaining_train_sequences: "data/splits/visdrone_mot_train_remaining.txt"
   split_protocol: "data/splits/visdrone_split_protocol.md"
   final_evaluation_split: "VisDrone2019-MOT-val"
-  evaluation_sequences: "TBD"
+  evaluation_sequences: "data/splits/visdrone_mot_val.txt"
 
 detector:
   implementation: "TBD"
