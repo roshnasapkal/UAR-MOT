@@ -17,7 +17,12 @@ paths:
 
 dataset:
   primary: "VisDrone"
-  calibration_sequences: "TBD"
+  train_manifest: "data/splits/visdrone_mot_train_all.txt"
+  calibration_sequences: "data/splits/visdrone_mot_calibration.txt"
+  development_sequences: "data/splits/visdrone_mot_development.txt"
+  remaining_train_sequences: "data/splits/visdrone_mot_train_remaining.txt"
+  split_protocol: "data/splits/visdrone_split_protocol.md"
+  final_evaluation_split: "VisDrone2019-MOT-val"
   evaluation_sequences: "TBD"
 
 detector:
