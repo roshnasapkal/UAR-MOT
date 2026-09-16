@@ -1,0 +1,89 @@
+# UAR-MOT detector training protocol
+# Frozen before detector performance is inspected.
+
+detector:
+  framework: "Megvii-BaseDetection/YOLOX"
+  tag: "0.1.0"
+  commit: "e1052df71842031413f6030723c3607b839c80ce"
+
+  architecture: "YOLOX-M"
+  depth: 0.67
+  width: 0.75
+  num_classes: 5
+
+  classes:
+    1: "pedestrian"
+    2: "car"
+    3: "van"
+    4: "truck"
+    5: "bus"
+
+dataset:
+  source: "VisDrone2019-MOT-train"
+
+  detector_train_manifest: "data/splits/visdrone_detector_train.txt"
+  detector_validation_manifest: "data/splits/visdrone_detector_val.txt"
+
+  train_sequences: 27
+  validation_sequences: 5
+
+  train_images: 13067
+  validation_images: 2104
+
+  train_annotations: 475877
+  validation_annotations: 51776
+
+  final_visdrone_evaluation_used_for_detector_selection: false
+  uarmot_calibration_sequences_used_for_detector_selection: false
+  uarmot_development_sequences_used_for_detector_selection: false
+
+initialization:
+  source: "official YOLOX-M COCO-pretrained checkpoint"
+  checkpoint_sha256: "TBD"
+
+training:
+  input_size: [640, 640]
+  test_size: [640, 640]
+
+  max_epochs: 100
+  warmup_epochs: 5
+  no_aug_epochs: 15
+
+  scheduler: "yoloxwarmcos"
+  basic_lr_per_image: 0.00015625
+  warmup_lr: 0
+  min_lr_ratio: 0.05
+
+  momentum: 0.9
+  weight_decay: 0.0005
+  ema: true
+
+  batch_size: "TBD_MEMORY_PROBE_ONLY"
+  fp16: true
+  workers: 2
+
+  seed: 42
+
+validation:
+  interval_epochs: 10
+
+  checkpoint_selection:
+    primary_metric: "COCO AP@[0.50:0.95]"
+    direction: "maximize"
+    dataset: "detector-validation only"
+
+  test_confidence: 0.01
+  nms_threshold: 0.65
+
+leakage_control:
+  detector_split_frozen_before_training: true
+  detector_validation_used_only_for_detector_model_selection: true
+  uarmot_calibration_used_for_detector_training: false
+  uarmot_development_used_for_detector_training: false
+  official_visdrone_val_used_for_detector_training: false
+  official_visdrone_val_used_for_detector_selection: false
+
+notes:
+  - "Batch size will be selected only by GPU-memory feasibility, not detector accuracy."
+  - "Detector validation results will not be used to alter the frozen 27/5 sequence split."
+  - "The selected detector will generate a single cached detection set shared by ByteTrack and UAR-MOT."
