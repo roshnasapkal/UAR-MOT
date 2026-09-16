@@ -28,7 +28,7 @@ detector:
 
 bytetrack:
   implementation: "FoundationVision/ByteTrack"
-  commit: "TBD"
+  commit: "d1bf0191adff59bc8fcfeaa0b33d3d1642552a99"
   track_thresh: "TBD"
   match_thresh: "TBD"
   track_buffer: "TBD"
