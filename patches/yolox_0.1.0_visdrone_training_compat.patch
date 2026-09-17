@@ -1,0 +1,42 @@
+diff --git a/yolox/exp/yolox_base.py b/yolox/exp/yolox_base.py
+index b7a31de..a9ae8c7 100644
+--- a/yolox/exp/yolox_base.py
++++ b/yolox/exp/yolox_base.py
+@@ -108,7 +108,7 @@ class Exp(BaseExp):
+             preproc=TrainTransform(
+                 rgb_means=(0.485, 0.456, 0.406),
+                 std=(0.229, 0.224, 0.225),
+-                max_labels=120,
++                max_labels=768,
+             ),
+             degrees=self.degrees,
+             translate=self.translate,
+diff --git a/yolox/models/yolo_head.py b/yolox/models/yolo_head.py
+index b11c6f5..48a7e4f 100644
+--- a/yolox/models/yolo_head.py
++++ b/yolox/models/yolo_head.py
+@@ -486,13 +486,17 @@ class YOLOXHead(nn.Module):
+         if mode == "cpu":
+             cls_preds_, obj_preds_ = cls_preds_.cpu(), obj_preds_.cpu()
+ 
+-        cls_preds_ = (
+-            cls_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
+-            * obj_preds_.unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
+-        )
+-        pair_wise_cls_loss = F.binary_cross_entropy(
+-            cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
+-        ).sum(-1)
++        # Compatibility guard for modern PyTorch AMP:
++        # BCE is unsafe under autocast. Preserve the original SimOTA
++        # calculation in explicit FP32 with autocast disabled.
++        with torch.cuda.amp.autocast(enabled=False):
++            cls_preds_ = (
++                cls_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
++                * obj_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
++            )
++            pair_wise_cls_loss = F.binary_cross_entropy(
++                cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
++            ).sum(-1)
+         del cls_preds_
+ 
+         cost = (
