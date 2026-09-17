@@ -36,8 +36,7 @@ initialization:
   state_entries_total: 606
   state_entries_loaded: 600
   state_entries_skipped: 6
-  loading_rule: load only keys whose names exist in the target model and whose tensor
-    shapes match exactly
+  loading_rule: load only keys whose names exist in the target model and whose tensor shapes match exactly
   skipped_keys:
   - head.cls_preds.0.weight
   - head.cls_preds.0.bias
@@ -63,10 +62,67 @@ training:
   momentum: 0.9
   weight_decay: 0.0005
   ema: true
-  batch_size: TBD_MEMORY_PROBE_ONLY
+  batch_size: 8
   fp16: true
   workers: 2
   seed: 42
+  batch_size_selection:
+    criterion: GPU memory feasibility and training robustness only; not detector accuracy
+    selected_before_detector_performance_evaluation: true
+    selected_batch_size: 8
+    hardware: NVIDIA Tesla T4, 14.563 GiB
+    maximum_multiscale_input:
+    - 832
+    - 832
+    selected_batch_probe:
+      batch_size: 8
+      resolution:
+      - 832
+      - 832
+      full_training_steps: 2
+      amp: true
+      sgd_optimizer_step: true
+      ema_update: true
+      mosaic: true
+      mixup: true
+      simota_cpu_fallback_detected: false
+      peak_allocated_gib: 5.053
+      peak_reserved_gib: 5.578
+      reserved_headroom_gib: 8.985
+      maximum_labels_per_image_observed: 162
+    boundary_probe_not_selected:
+      batch_size: 16
+      resolution:
+      - 832
+      - 832
+      full_training_steps: 2
+      peak_allocated_gib: 9.637
+      peak_reserved_gib: 10.992
+      reserved_headroom_gib: 3.571
+      reserved_fraction_percent: 75.5
+      maximum_labels_per_image_observed: 162
+      reason_not_selected: Passed short feasibility probe but retained substantially less memory headroom
+        for long stochastic Mosaic/MixUp training than batch size 8
+  target_label_capacity:
+    effective_max_labels: 768
+    reason: Avoid silent truncation of dense VisDrone Mosaic/MixUp training targets in pinned YOLOX 0.1.0
+    structural_conservative_pre_filter_bound: 735
+    bound_derivation: 'maximum 147 raw eligible boxes per frame; up to four Mosaic source frames plus
+      one MixUp source frame: 5*147=735'
+    empirical_augmented_scan:
+      resolution:
+      - 832
+      - 832
+      batch_size: 16
+      samples: 1600
+      maximum_labels_per_image: 238
+      samples_over_120: 154
+      samples_over_150: 51
+      samples_over_180: 13
+      samples_over_200: 4
+      samples_at_768: 0
+    interpretation: Empirical scan demonstrates that the former 120-label capacity would truncate real
+      augmented samples; absence of sampled outputs at 768 is not treated as a formal bound
 validation:
   interval_epochs: 10
   checkpoint_selection:
@@ -83,7 +139,8 @@ leakage_control:
   official_visdrone_val_used_for_detector_training: false
   official_visdrone_val_used_for_detector_selection: false
 notes:
-- Batch size will be selected only by GPU-memory feasibility, not detector accuracy.
+- Batch size 8 was frozen before detector-performance evaluation using GPU-memory feasibility and robustness
+  evidence only; it was not selected using detector AP, tracking metrics, UAR-MOT calibration/development
+  results, or final evaluation data.
 - Detector validation results will not be used to alter the frozen 27/5 sequence split.
-- The selected detector will generate a single cached detection set shared by ByteTrack
-  and UAR-MOT.
+- The selected detector will generate a single cached detection set shared by ByteTrack and UAR-MOT.
