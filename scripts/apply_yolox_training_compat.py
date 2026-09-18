@@ -4,7 +4,7 @@
 Safely apply the UAR-MOT compatibility patches to the pinned
 YOLOX 0.1.0 detector-training checkout.
 
-The compatibility layer makes exactly three intended changes:
+The compatibility layer makes exactly four intended changes:
 
 1. yolox/exp/yolox_base.py
    Effective MosaicDetection TrainTransform label capacity:
@@ -20,17 +20,21 @@ The compatibility layer makes exactly three intended changes:
    DataParallel and DistributedDataParallel remain supported;
    Apex DDP is included when Apex is installed.
 
+4. yolox/core/trainer.py
+   Replace legacy Apex AMP training/checkpoint handling with
+   native torch.amp GradScaler/autocast and PyTorch DDP.
+
 The script verifies:
 - exact pinned upstream YOLOX commit;
-- exact hashes of both approved patch files;
-- exact pristine hashes of all three target source files;
-- exact patched hashes of all three target source files;
+- exact hashes of all three approved patch files;
+- exact pristine hashes of all four target source files;
+- exact patched hashes of all four target source files;
 - exact changed-file set;
 - semantic fragments;
-- reverse applicability of both patches.
+- reverse applicability of all three patches.
 
 It is intentionally idempotent:
-- pristine expected checkout -> apply both patches and verify;
+- pristine expected checkout -> apply all three patches and verify;
 - exact combined patched checkout -> verify and exit;
 - partial, altered, or otherwise unexpected state -> refuse.
 """
@@ -70,6 +74,17 @@ PATCH_SPECS = (
             "cb8d113dc023f74084b277a41410f7f5"
         ),
     },
+    {
+        "name": "native PyTorch AMP Trainer compatibility",
+        "default_path": (
+            "/content/UAR-MOT/patches/"
+            "yolox_0.1.0_native_amp_trainer_compat.patch"
+        ),
+        "sha256": (
+            "c3d12431346d41d63de908749bac0cd2"
+            "e05e3311dd8ae0ceb21e48a30ab50f7e"
+        ),
+    },
 )
 
 
@@ -86,6 +101,10 @@ PRISTINE_HASHES = {
         "3e82e19000b4ab0f88d2f94a4b425cc"
         "20323fba84e0700e885a5638d0ce3eebb"
     ),
+    "yolox/core/trainer.py": (
+        "f6e969a7be1393ee41290d4231b0ba67"
+        "0ee4eaa711524017b62fcde634fcefbb"
+    ),
 }
 
 
@@ -101,6 +120,10 @@ PATCHED_HASHES = {
     "yolox/utils/ema.py": (
         "88692a29551ca24eed37c19d3986ad46"
         "f9b458cec378a9da35689aceb777563c"
+    ),
+    "yolox/core/trainer.py": (
+        "53e2a5752d1a4199d3cba298ea07b0b"
+        "0bfed3e741959dc9e09c01cd3b16ee969"
     ),
 }
 
@@ -122,6 +145,16 @@ PATCHED_REQUIRED_TEXT = {
         "except ImportError:",
         "apex.parallel.distributed.DistributedDataParallel",
     ),
+    "yolox/core/trainer.py": (
+        "from torch.nn.parallel import DistributedDataParallel as DDP",
+        "self.scaler = torch.amp.GradScaler(",
+        "with torch.amp.autocast(",
+        "self.scaler.scale(loss).backward()",
+        "self.scaler.step(self.optimizer)",
+        "self.scaler.update()",
+        'self.scaler.load_state_dict(ckpt["scaler"])',
+        'ckpt_state["scaler"] = self.scaler.state_dict()',
+    ),
 }
 
 
@@ -131,6 +164,15 @@ PATCHED_FORBIDDEN_TEXT = {
     ),
     "yolox/utils/ema.py": (
         '    import apex\n\n    parallel_type = (',
+    ),
+    "yolox/core/trainer.py": (
+        "import apex",
+        "from apex import amp",
+        "amp.initialize(",
+        "amp.scale_loss(",
+        "amp.load_state_dict(",
+        'ckpt_state["amp"]',
+        "apex.parallel.DistributedDataParallel",
     ),
 }
 
@@ -321,7 +363,7 @@ def verify_exact_patched_state(
 
         raise RuntimeError(
             "Patched source hashes do not exactly match "
-            "the approved three-file state."
+            "the approved four-file state."
         )
 
     verify_patched_content(
@@ -354,6 +396,11 @@ def main():
         default=PATCH_SPECS[1]["default_path"],
     )
 
+    parser.add_argument(
+        "--native-amp-patch",
+        default=PATCH_SPECS[2]["default_path"],
+    )
+
     args = parser.parse_args()
 
     yolox_root = Path(
@@ -366,6 +413,9 @@ def main():
         ).resolve(),
         Path(
             args.ema_patch
+        ).resolve(),
+        Path(
+            args.native_amp_patch
         ).resolve(),
     )
 
@@ -449,7 +499,7 @@ def main():
 
         print(
             "\nSTATUS: already exactly patched — "
-            "three-file verification PASS."
+            "four-file verification PASS."
         )
 
         return 0
@@ -467,7 +517,7 @@ def main():
 
     # ----------------------------------------------
     # Pristine state:
-    # pre-check BOTH patches before changing anything
+    # pre-check ALL patches before changing anything
     # ----------------------------------------------
 
     print(
@@ -506,7 +556,7 @@ def main():
             )
 
     # ----------------------------------------------
-    # Apply both approved patches in fixed order
+    # Apply all approved patches in fixed order
     # ----------------------------------------------
 
     for spec, path in zip(
@@ -563,8 +613,8 @@ def main():
     )
 
     print(
-        "\nSTATUS: both compatibility patches "
-        "applied; exact three-file verification PASS."
+        "\nSTATUS: all compatibility patches "
+        "applied; exact four-file verification PASS."
     )
 
     return 0
