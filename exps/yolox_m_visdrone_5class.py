@@ -14,6 +14,9 @@ class Exp(MyExp):
         self.width = 0.75
         self.num_classes = 5
 
+        # Reproducibility
+        self.seed = 42
+
         self.exp_name = "yolox_m_visdrone_5class"
 
         # Dataset
