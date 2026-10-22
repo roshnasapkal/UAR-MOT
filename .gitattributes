@@ -1,0 +1,2 @@
+# Frozen patch SHA-256 values are defined over the committed LF bytes.
+patches/*.patch text eol=lf
